@@ -1,0 +1,102 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model for authentication (Admin and Students)
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  role      Role     @default(STUDENT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  student   Student? @relation("UserStudent")
+
+  @@map("users")
+}
+
+enum Role {
+  ADMIN
+  STUDENT
+}
+
+// Student model
+model Student {
+  id          String   @id @default(uuid())
+  name        String
+  rollNumber  String   @unique
+  email       String   @unique
+  userId      String   @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user        User       @relation("UserStudent", fields: [userId], references: [id], onDelete: Cascade)
+  attendance  Attendance[]
+
+  @@map("students")
+}
+
+// Subject model (AQDA, WAP, DBMS, MATHS)
+model Subject {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  code        String   @unique
+  createdAt   DateTime @default(now())
+
+  // Relations
+  attendance  Attendance[]
+  timetable   Timetable[]
+
+  @@map("subjects")
+}
+
+// Attendance model
+model Attendance {
+  id          String   @id @default(uuid())
+  studentId   String
+  subjectId   String
+  date        DateTime
+  status      AttendanceStatus
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subject     Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, subjectId, date])
+  @@map("attendance")
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+}
+
+// Timetable model for class schedule
+model Timetable {
+  id          String   @id @default(uuid())
+  dayOfWeek   Int      // 0 = Sunday, 1 = Monday, ... 6 = Saturday
+  startTime   String   // e.g., "9:00 AM"
+  endTime     String   // e.g., "10:00 AM"
+  subjectId   String
+  room        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  subject     Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@map("timetable")
+}
