@@ -50,7 +50,7 @@ router.post('/students', adminOnly, async (req, res) => {
 router.get('/students', adminOnly, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
+        const limit = parseInt(req.query.limit) || 6; // Default to 6 per page
         const skip = (page - 1) * limit;
 
         const [students, total] = await Promise.all([
@@ -239,7 +239,7 @@ router.delete('/students/:id', adminOnly, async (req, res) => {
 router.get('/attendance', adminOnly, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
+        const limit = parseInt(req.query.limit) || 6; // Default to 6 per page
         const skip = (page - 1) * limit;
 
         const [records, total] = await Promise.all([
