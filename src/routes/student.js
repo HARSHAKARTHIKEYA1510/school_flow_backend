@@ -28,7 +28,7 @@ router.get('/attendance', studentOnly, async (req, res) => {
         const records = await prisma.attendance.findMany({
             where: { studentId: student.id },
             include: { subject: true },
-            orderBy: { date: 'desc' },
+            orderBy: { date: 'desc' }, // Sort by date descending (present to past)
         });
 
         return res.json({ student, records });

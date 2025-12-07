@@ -46,12 +46,32 @@ router.post('/students', adminOnly, async (req, res) => {
 });
 
 // List all students (admin only)
+// List all students (admin only)
 router.get('/students', adminOnly, async (req, res) => {
     try {
-        const students = await prisma.student.findMany({
-            include: { user: true },
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        const [students, total] = await Promise.all([
+            prisma.student.findMany({
+                skip,
+                take: limit,
+                orderBy: { name: 'asc' }, // Sort by name A-Z
+                include: { user: true },
+            }),
+            prisma.student.count()
+        ]);
+
+        return res.json({
+            students,
+            pagination: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            }
         });
-        return res.json(students);
     } catch (err) {
         console.error(err);
         return res.status(500).json({ error: 'Server error' });
@@ -215,16 +235,35 @@ router.delete('/students/:id', adminOnly, async (req, res) => {
 });
 
 // Get all attendance records (admin only)
+// Get all attendance records (admin only)
 router.get('/attendance', adminOnly, async (req, res) => {
     try {
-        const records = await prisma.attendance.findMany({
-            include: {
-                student: true,
-                subject: true
-            },
-            orderBy: { date: 'desc' }
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        const [records, total] = await Promise.all([
+            prisma.attendance.findMany({
+                skip,
+                take: limit,
+                include: {
+                    student: true,
+                    subject: true
+                },
+                orderBy: { date: 'desc' }
+            }),
+            prisma.attendance.count()
+        ]);
+
+        return res.json({
+            records,
+            pagination: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            }
         });
-        return res.json(records);
     } catch (err) {
         console.error(err);
         return res.status(500).json({ error: 'Server error' });
