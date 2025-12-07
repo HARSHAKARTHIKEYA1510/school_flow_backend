@@ -7,6 +7,14 @@ const prisma = new PrismaClient();
 async function main() {
     console.log('Seeding database...');
 
+    // 0. Cleanup existing data
+    console.log('Cleaning up database...');
+    await prisma.attendance.deleteMany({});
+    await prisma.timetable.deleteMany({});
+    await prisma.student.deleteMany({});
+    await prisma.user.deleteMany({});
+    await prisma.subject.deleteMany({});
+
     // 1. Create subjects
     const subjectNames = ['ADA', 'AP', 'DBMS', 'MATHS'];
     const subjects = [];

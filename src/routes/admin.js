@@ -65,6 +65,28 @@ router.post('/attendance', adminOnly, async (req, res) => {
         return res.status(400).json({ error: 'Missing fields' });
     }
     try {
+        // Check limit: Max 4 records per subject per day
+        const recordDate = new Date(date);
+        const startOfDay = new Date(recordDate);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(recordDate);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const count = await prisma.attendance.count({
+            where: {
+                studentId,
+                subjectId,
+                date: {
+                    gte: startOfDay,
+                    lte: endOfDay
+                }
+            }
+        });
+
+        if (count >= 4) {
+            return res.status(400).json({ error: 'Maximum 4 attendance records allowed per subject per day' });
+        }
+
         const attendance = await prisma.attendance.create({
             data: {
                 studentId,
@@ -215,22 +237,52 @@ router.put('/attendance/:id', adminOnly, async (req, res) => {
     const { studentId, subjectId, date, status } = req.body;
 
     try {
-        // Check if another record exists with the same student, subject, and date
-        if (studentId && subjectId && date) {
-            const duplicate = await prisma.attendance.findFirst({
-                where: {
-                    studentId,
-                    subjectId,
-                    date: new Date(date),
-                    NOT: { id } // Exclude current record
-                }
-            });
+        const existingRecord = await prisma.attendance.findUnique({ where: { id } });
+        if (!existingRecord) {
+            return res.status(404).json({ error: 'Record not found' });
+        }
 
-            if (duplicate) {
-                return res.status(400).json({
-                    error: 'An attendance record already exists for this student, subject, and date'
-                });
+        const targetStudentId = studentId || existingRecord.studentId;
+        const targetSubjectId = subjectId || existingRecord.subjectId;
+        const targetDateStr = date || existingRecord.date;
+        const targetDate = new Date(targetDateStr);
+
+        // Check limit: Max 4 records per subject per day
+        const startOfDay = new Date(targetDate);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(targetDate);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const count = await prisma.attendance.count({
+            where: {
+                studentId: targetStudentId,
+                subjectId: targetSubjectId,
+                date: {
+                    gte: startOfDay,
+                    lte: endOfDay
+                },
+                NOT: { id } // Exclude current record
             }
+        });
+
+        if (count >= 4) {
+            return res.status(400).json({ error: 'Maximum 4 attendance records allowed per subject per day' });
+        }
+
+        // Check for exact duplicates
+        const duplicate = await prisma.attendance.findFirst({
+            where: {
+                studentId: targetStudentId,
+                subjectId: targetSubjectId,
+                date: targetDate,
+                NOT: { id }
+            }
+        });
+
+        if (duplicate) {
+            return res.status(400).json({
+                error: 'An attendance record already exists for this student, subject, and date'
+            });
         }
 
         const attendance = await prisma.attendance.update({
